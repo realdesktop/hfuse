@@ -29,6 +29,7 @@ module System.Fuse
     , FuseOperations(..)
     , defaultFuseOps
     , fuseMain -- :: FuseOperations fh -> (Exception -> IO Errno) -> IO ()
+    , fuseRun -- :: String -> [String] -> FuseOperations fh -> (Exception -> IO Errno) -> IO ()
     , defaultExceptionHandler -- :: Exception -> IO Errno
       -- * Operations datatypes
     , FileStat(..)
@@ -433,11 +434,9 @@ defaultFuseOps =
                    }
 
 -- Allocates a fuse_args struct to hold the commandline arguments.
-withFuseArgs :: (Ptr CFuseArgs -> IO b) -> IO b
-withFuseArgs f =
-    do prog <- getProgName
-       args <- getArgs
-       let allArgs = (prog:args)
+withFuseArgs :: String -> [String] -> (Ptr CFuseArgs -> IO b) -> IO b
+withFuseArgs prog args f =
+    do let allArgs = (prog:args)
            argc = length allArgs
        withMany withCString allArgs (\ cArgs ->
            withArray cArgs $ (\ pArgv ->
@@ -832,13 +831,19 @@ fuseMainReal foreground ops handler pArgs mountPt =
 --
 --   * calls FUSE event loop.
 fuseMain :: Exception e => FuseOperations fh -> (e -> IO Errno) -> IO ()
-fuseMain ops handler =
+fuseMain ops handler = do
     -- this used to be implemented using libfuse's fuse_main. Doing this will fork()
     -- from C behind the GHC runtime's back, which deadlocks in GHC 6.8.
     -- Instead, we reimplement fuse_main in Haskell using the forkProcess and the
     -- lower-level fuse_new/fuse_loop_mt API.
+    prog <- getProgName
+    args <- getArgs
+    fuseRun prog args ops handler
+
+fuseRun :: String -> [String] -> Exception e => FuseOperations fh -> (e -> IO Errno) -> IO ()
+fuseRun prog args ops handler =
     IO.catch
-       (withFuseArgs (\pArgs ->
+       (withFuseArgs prog args (\pArgs ->
          do cmd <- fuseParseCommandLine pArgs
             case cmd of
               Nothing -> fail ""
