@@ -20,6 +20,7 @@
 -- option).
 --
 -----------------------------------------------------------------------------
+{-# LANGUAGE FlexibleContexts #-}
 module System.Fuse
     ( -- * Using FUSE
 
