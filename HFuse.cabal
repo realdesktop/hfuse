@@ -28,5 +28,6 @@ Library
   CC-Options:             -D_FILE_OFFSET_BITS=64
   if os(darwin) {
     CC-Options:           "-DMACFUSE"
+    CC-Options:           "-DFUSE_USE_VERSION=26"
   }
 
