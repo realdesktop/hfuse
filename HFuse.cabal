@@ -1,14 +1,15 @@
 Name:                   HFuse
-Version:                0.2.4
+Version:                0.2.4.1
 License:                BSD3
-License-File:		LICENSE
+License-File:           LICENSE
 Author:                 Jeremy Bobbio
-Maintainer: 		Taru Karttunen <taruti@taruti.net>
+Maintainer:             Paul van der Walt <cabal@denknerd.org>
 Synopsis:               HFuse is a binding for the Linux FUSE library.
-Homepage:               https://github.com/realdesktop/hfuse
+Description:            Bindings for the FUSE library, compatible with OSXFUSE.
+Homepage:               https://github.com/toothbrush/hfuse
 Category:               System
 Stability:              Experimental
-Cabal-Version:          >= 1.2
+Cabal-Version:          >= 1.6
 Build-Type:             Simple
 Extra-source-files:     README
 
@@ -28,3 +29,7 @@ Library
   Extra-Libraries:        fuse
   Extra-Lib-Dirs:         /usr/local/lib
   CC-Options:             -D_FILE_OFFSET_BITS=64
+
+source-repository head
+    type:       head
+    location:   https://github.com/toothbrush/hfuse.git
