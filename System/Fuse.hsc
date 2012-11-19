@@ -20,7 +20,7 @@
 -- option).
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes #-}
 module System.Fuse
     ( -- * Using FUSE
 
@@ -52,7 +52,7 @@ module System.Fuse
 import Prelude hiding ( Read )
 
 import Control.Monad
-import Control.Exception as E(Exception, handle, finally, SomeException)
+import Control.Exception as E(catch, Exception, IOException, handle, finally, SomeException)
 import qualified Data.ByteString.Char8    as B
 import qualified Data.ByteString.Internal as B
 import qualified Data.ByteString.Unsafe   as B
@@ -70,7 +70,7 @@ import System.Posix.IO ( OpenMode(..), OpenFileFlags(..) )
 import qualified System.Posix.Signals as Signals
 import GHC.IO.Handle(hDuplicateTo)
 import System.Exit
-import qualified System.IO.Error as IO(catch,ioeGetErrorString)
+import qualified System.IO.Error as IO(ioeGetErrorString)
 
 -- TODO: FileMode -> Permissions
 -- TODO: Arguments !
@@ -757,16 +757,17 @@ fuseParseCommandLine pArgs =
 -- Mimic's daemon()s use of _exit() instead of exit(); we depend on this in fuseMainReal,
 -- because otherwise we'll unmount the filesystem when the foreground process exits.
 daemon f = forkProcess d >> exitImmediately ExitSuccess
-  where d = IO.catch (do createSession
-                         changeWorkingDirectory "/"
-                         -- need to open /dev/null twice because hDuplicateTo can't dup a ReadWriteMode to a ReadMode handle
-                         withFile "/dev/null" WriteMode (\devNullOut ->
-                           do hDuplicateTo devNullOut stdout
-                              hDuplicateTo devNullOut stderr)
-                         withFile "/dev/null" ReadMode (\devNullIn -> hDuplicateTo devNullIn stdin)
-                         f
-                         exitWith ExitSuccess)
-                     (const exitFailure)
+  where d = E.catch (do 
+                        createSession
+                        changeWorkingDirectory "/"
+                        -- need to open /dev/null twice because hDuplicateTo can't dup a ReadWriteMode to a ReadMode handle
+                        withFile "/dev/null" WriteMode (\devNullOut ->
+                          do hDuplicateTo devNullOut stdout
+                             hDuplicateTo devNullOut stderr)
+                        withFile "/dev/null" ReadMode (\devNullIn -> hDuplicateTo devNullIn stdin)
+                        f
+                        exitWith ExitSuccess)
+                     (\(_ :: IOException) -> exitFailure)
 
 -- Installs signal handlers for the duration of the main loop.
 withSignalHandlers exitHandler f =
@@ -843,7 +844,7 @@ fuseMain ops handler = do
 
 fuseRun :: String -> [String] -> Exception e => FuseOperations fh -> (e -> IO Errno) -> IO ()
 fuseRun prog args ops handler =
-    IO.catch
+    E.catch
        (withFuseArgs prog args (\pArgs ->
          do cmd <- fuseParseCommandLine pArgs
             case cmd of
