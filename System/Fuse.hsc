@@ -77,9 +77,7 @@ import qualified System.IO.Error as IO(catch,ioeGetErrorString)
 -- TODO: implement binding to fuse_invalidate
 -- TODO: bind fuse_*xattr
 
-#define FUSE_USE_VERSION 26
-
-#ifdef MACFUSE
+#if defined MACFUSE || defined __FreeBSD__
 #include <sys/mount.h>
 #else
 #include <sys/statfs.h>
